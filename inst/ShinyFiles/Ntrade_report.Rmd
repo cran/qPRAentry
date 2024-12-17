@@ -1,0 +1,163 @@
+---
+title: "$N_{trade}$ report"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+params:
+  time_period: NA
+  units: NA
+  nuts_yr: NA,
+  Nt_result: NA
+  Nt_redist: NA
+  data_redistribution: NA
+  population_year: NA
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE,
+                      fig.pos = 'h',
+                      fig.align = 'center',
+                      fig.height = 3,
+                      fig.width = 4)
+```
+
+```{r}
+#Available variables
+
+time_period <- params$time_period
+units <- params$units
+nuts_yr <- params$nuts_yr
+Nt <- params$Nt_result
+Nt_redist <- params$Nt_redist
+data_redistribution <- params$data_redistribution
+population_year <- params$population_year
+
+```
+
+
+## Introduction
+
+This report details the results of the $N_{trade}$ analysis performed using the 
+$N_{trade}$ app of the \texttt{qPRAentry} package.
+
+In the context of quantitative risk assessment of pest entry, $N_{trade}$ is defined 
+as the potentially infected/infested quantity of commodities imported by a country from 
+other third-countries where the pest of interest is present. 
+This application is meant to calculate $N_{trade}$ in countries using the NUTS 
+coding system (NUTS0) and redistribute this quantity to the regions (NUTS2) of 
+the countries considered.
+
+
+## Calculation of $N_{trade}$
+
+For a given country of interest $i$, $N_{trade_i}$ is calculated taking into account the 
+quantity of commodity imported by country $i$ from third countries where the pest 
+is present, and the internal trade of this commodity, i.e., export and import 
+between country $i$ and other countries of interest $j$, with $j \neq i$. Thus, 
+$N_{trade_i}$ is approached as:
+
+$$
+N_{trade_i} = ExtraPest_i - ExtraPest_i \sum_{j \neq i} R_{ij} + \sum_{j \neq i} ExtraPest_j R_{ji},
+$$
+
+where $ExtraPest_i$ and $ExtraPest_j$ are the quantity of commodity imported from 
+third countries where the pest is present by country $i$ and country $j$, respectively. 
+$R_{ij}$ and $R_{ji}$ represent the proportion of commodity exported from $i$ 
+to $j$ ($IntraExp_{ij}$), and from $j$ to $i$ ($IntraExp_{ji}$), respectively, 
+out of the total available commodity in the exporter country. This total available
+quantity is considered as the sum of the internal production of the country ($IP$) 
+and the total quantity imported from third countries ($ExtraTotal$), 
+regardless of whether the pest is present. Therefore, $R_{ij}$ and $R_{ji}$ 
+can be defined as: 
+
+  $$R_{ij} = \frac{IntraExp_{ij}}{IP_i + ExtraTotal_i},$$
+  
+  $$R_{ji} = \frac{IntraExp_{ji}}{IP_j + ExtraTotal_j}.$$
+  
+
+Based on these proportions, the quantity of $ExtraPest_i$ re-exported from country $i$ 
+to all countries $j$ is approximated by $ExtraPest_i \sum_{j \neq i} R_{ij}$, 
+while the quantity of $ExtraPest_j$ re-exported from all countries $j$ to country 
+$i$ is estimated as $\sum_{j \neq i} ExtraPest_j R_{ji}$.
+  
+$N_{trade}$ has been calculated in `r units` for the following time-period: `r time_period`.
+
+```{r, fig.width=8, fig.height=8, fig.cap="Figure 1: N~trade~ values by country (NUTS0 level)"}
+if(length(time_period)>1){
+  col_plot <- title_plot <- "Median"
+}else{
+  col_plot <- paste0("Ntrade_", time_period)
+  title_plot <- time_period
+}
+
+p <- plot_nuts(Nt, "NUTS0", col_plot,
+               nuts_level = 0, nuts_year = nuts_yr,
+               title = bquote(N[trade] ~ " " ~ .(title_plot)), 
+               legend_title = units) +
+  xlim(-20, 40) + ylim(35,70) +
+  theme_bw()+
+  theme(
+     plot.title = element_text(size = 14),
+     legend.title = element_text(size = 12)
+   ) 
+
+print(p)
+
+```
+
+
+## $N_{trade}$ redistribution to NUTS2
+
+After calculating $N_{trade}$ at the country level (NUTS0), the next step involves 
+redistributing these quantities to NUTS2 regions. 
+
+```{r}
+
+if(data_redistribution=="Human population"){
+  data_text <- "human population data from Eurostat"
+}else{
+  data_text <- "user custom data"
+}
+
+```
+
+For this analysis, $N_{trade}$ data were redistributed from NUTS0 to NUTS2 level 
+proportionally to `r data_text`.
+
+```{r}
+
+# population year/s:
+
+if(data_redistribution=="Human population"){
+  data_text <- "human population data from Eurostat"
+  if(length(population_year)==1){
+    population_year_text <- paste0("The selected year for human population data is ",
+                                   population_year, ".")
+  }else{
+    population_year_text <- 
+      paste0("The selected years for which the average human population will be 
+             used as the basis for redistribution are: ", 
+             paste0(population_year, collapse=", "), ".")
+  }
+}else{
+  data_text <- "user custom data"
+  population_year_text <- NULL
+}
+```
+
+`r population_year_text`
+
+```{r, fig.width=8, fig.height=8, fig.cap="Figure 2: N~trade~ values redistributed at the NUTS2 level"}
+
+plot_nuts(Nt_redist, "NUTS2", col_plot, 
+          nuts_level = 2, nuts_year = nuts_yr,
+          title = bquote(N[trade] ~ " " ~ .(title_plot)), 
+          legend_title = units) +
+  xlim(-20, 40) + ylim(35,70) +
+  theme_bw()+
+  theme(
+     plot.title = element_text(size = 14),
+     legend.title = element_text(size = 12)
+   ) 
+```
+

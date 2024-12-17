@@ -1,0 +1,166 @@
+---
+title: "Pathway model report"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+bibliography: references.bib
+params:
+  nuts_yr: NA
+  ntrade: NA
+  model_def: NA
+  param_names: NA
+  par_settings: NA
+  n_iter: NA
+  dist_result: NA
+  Ninf: NA
+  Ninf_EU: NA
+  nuts_level: NA
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE,
+                      fig.pos = 'h',
+                      fig.align = 'center',
+                      fig.height = 3,
+                      fig.width = 7)
+```
+
+```{r}
+nuts_yr <- params$nuts_yr # NUTS classification year
+ntrade <- params$ntrade # Ntrade data
+model_def <- params$model_def # model equation
+param_names <- params$param_names # parameter names
+n_iter <- params$n_iter # number of iterations
+par_settings <- params$par_settings # Parameter distributions
+dist_result <- params$dist_result # random values generated from the distributions
+Ninf <- params$Ninf # Ninf results
+Ninf_EU <- params$Ninf_EU # Ninf results total EU
+NUTS_lev <- params$nuts_level #selected NUTS (depending on the Excel Ntrade file chosen)
+
+```
+
+```{r}
+# function to print the model equation on multiple lines
+split_equation <- function(eq, width = 70) {
+  parts <- strsplit(eq, "(?<=\\*|\\/|\\+|\\-)", perl = TRUE)[[1]]
+  output <- ""
+  line_length <- 0
+  for (part in parts) {
+    line_length <- line_length + nchar(part)
+     if (grepl("\\*", part)) {
+      part <- gsub("\\*", " \\\\cdot ", part)
+    }
+    if (line_length > width) {
+      output <- paste0(output, part, " \\\\ ")
+      line_length <- nchar(part)
+    } else {
+      output <- paste0(output, part, " ")
+    }
+  }
+  return(output)
+}
+
+# width: width of the line
+model_def_split <- split_equation(model_def, width=100)
+```
+
+
+## Introduction
+
+This report details the results of the pathway model analysis conducted using 
+the Pathway model app of the \texttt{qPRAentry} package.
+It provides an estimation of the number of potential founder populations 
+$(\mathit{NPFP})$ of a pest in different regions, using $N_{trade}$ data combined 
+with additional user-defined parameters.
+The pathway model complexity can vary based on factors such as the specific pest 
+under consideration and the availability of detailed data. 
+As the approach used is based on the work of the European Food Safety Authority
+(EFSA), additional information can be found in the EFSA Guidance on quantitative 
+pest risk assessment [@efsa2018guidance].
+
+
+
+## Pathway model
+
+The defined pathway model and its corresponding parameters are presented below:
+
+\begin{gather*}
+`r model_def_split`
+\end{gather*}
+
+
+A total of `r n_iter` iterations were performed to randomly generate parameter 
+values based on the specified distribution.
+
+### Parameter distributions: 
+
+
+```{r, results='asis'}
+tex_to_expr <- function(tex_str) {
+  tex_str <- gsub("\\$", "", tex_str) 
+  tex_str <- gsub("_\\{([^}]+)\\}", "[\\1]", tex_str) 
+  tex_str <- gsub("_([[:alnum:]])", "[\\1]", tex_str)
+  tex_str <- gsub("\\^\\{([^}]+)\\}", "^\\1", tex_str)
+  tex_str <- gsub("\\^([[:alnum:]])", "^\\1", tex_str)
+
+  parse(text = tex_str)[[1]]
+}
+
+par(mfrow = c(1, 2), mar = c(4, 3, 2, 1))
+
+for (i in seq_along(param_names)) {
+  par_name <- tex_to_expr(param_names[i])
+  # Histogram
+  hist(dist_result[[i]], 
+       main = bquote(atop(.(par_name), .(par_settings[i]))),
+       xlab = "",
+       probability = TRUE, 
+       breaks = "fd", 
+       col = "lightblue",
+       cex.main = 0.8,
+       cex.lab = 0.8) 
+  # Add a density line
+  lines(density(dist_result[[i]]), col = "blue", lwd = 2)
+}
+
+```
+
+
+## $\mathit{NPFP}$ results
+
+As a result of the pathway model the $\mathit{NPFP}$ 
+is estimated for each NUTS `r NUTS_lev` level.
+The summary of the overall results for all the selected NUTS are shown below.
+
+```{r}
+
+# Display the table
+knitr::kable(Ninf_EU, 
+             caption = "Table 1: Number of potential founder populations (NPFP) results for 
+             all the selected NUTS", 
+             digits = 4) 
+
+```
+
+Based on the median NPFP, there would be 1 entry event in the whole territory every 
+`r round(1/Ninf_EU["Median"])` years (90% interval: `r round(1/Ninf_EU["Q0.05"])` - `r round(1/Ninf_EU["Q0.95"])` years).
+
+The map below shows the median $\mathit{NPFP}$ values by NUTS`r NUTS_lev`.
+
+```{r, fig.width=8, fig.height=8, fig.cap = paste0("Figure 1: Number of potential founder populations (NPFP) at the NUTS", NUTS_lev, " level")}
+
+plot_nuts(Ninf, "NUTS_ID", "Median", 
+          nuts_level = NUTS_lev, nuts_year = nuts_yr,
+          title = "NPFP Median", legend_title = "NPFP") +
+   xlim(-20, 40) + ylim(35,70) +
+   theme_bw()+
+  theme(
+     plot.title = element_text(size = 14),
+     legend.title = element_text(size = 12)
+   )
+
+```
+
+
+## References
+
+
