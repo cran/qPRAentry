@@ -160,7 +160,12 @@ mod_ntrade_redistribution_server <- function(id, nuts_yr, Nt, time_period, units
             incProgress(1/5)
           }
 
-        df <- cached_get_eurostat_data(nuts_level = 2) 
+        df <- tryCatch({
+          cached_get_eurostat_data(nuts_level = 2)
+        }, error = function(e) {
+          output$message <- renderText({e$message})
+          return(NULL)
+        })
           
         shinyWidgets::updatePickerInput(session = session,
                                         inputId = "population_year",

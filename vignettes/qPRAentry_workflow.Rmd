@@ -396,19 +396,45 @@ The `redist_nuts()` function can be used with human population data from Eurosta
 
 The redistribution of the $N_{trade}$ mean obtained above from NUTS0 to NUTS2, based on the human population of the years 2020 and 2021 in each NUTS2, is shown below.
 
-```{r}
+```{r include=FALSE}
+error_msg <- NULL
+ntrade_redist_pop <- tryCatch({
+  suppressMessages(
+    suppressWarnings(
+      redist_nuts(data = ntrade_EU,
+                  nuts_col = "country_IDs",
+                  values_col = "mean",
+                  to_nuts = 2,
+                  redist_data = "population",
+                  population_year = c(2020, 2021))
+    ))
+}, error = function(e) {
+  error_msg <<- paste("Error:", e$message)
+  NULL
+})
+eval_cond <- ifelse(is.null(ntrade_redist_pop), FALSE, TRUE)
+```
+
+```{r eval=!eval_cond, echo=FALSE}
+message(error_msg)
+```
+
+```{r eval=FALSE}
 ntrade_redist_pop <- redist_nuts(data = ntrade_EU,
                                  nuts_col = "country_IDs",
                                  values_col = "mean",
                                  to_nuts = 2,
                                  redist_data = "population",
                                  population_year = c(2020, 2021))
+```
+
+```{r eval=eval_cond}
 head(ntrade_redist_pop)
 ```
 
 Plot the $N_{trade}$ mean for each NUTS2 region:
 
-```{r}
+```{r eval=eval_cond}
 plot_nuts(data = ntrade_redist_pop,
           nuts_col = "NUTS2",
           values_col = "mean",
@@ -459,7 +485,7 @@ A distribution is then assigned to each parameter and all relevant information,
 along with the desired number of iterations, is incorporated into 
 the `pathway_model()` function. Note that $N_{trade}$ must not be included in the model expression.
 
-```{r}
+```{r eval=eval_cond}
 # pathway model (excluding ntrade)
 model <- "(1/P1) * P2 * P3"
 
@@ -479,13 +505,13 @@ head(res_pathway)
 
 The result also includes the total $NPFP$ for the set of NUTS2 considered:
 
-```{r}
+```{r eval=eval_cond}
 res_pathway[res_pathway$NUTS2 == "Total",]
 ```
 
 Plot the $NPFP$ mean for each NUTS2:
 
-```{r}
+```{r eval=eval_cond}
 plot_nuts(data = res_pathway,
           nuts_level = 2,
           nuts_col = "NUTS2",

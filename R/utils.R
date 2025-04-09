@@ -148,13 +148,25 @@ missing_intra <- function(data, IDs) {
 get_population_data <- function(nuts_level, nuts_filter=NULL) {
   sex <- age <- NULL
   length_nuts <- nuts_level + 2 # NUTS characters
-  df <- eurostat::get_eurostat("demo_r_pjangrp3", time_format = "num") %>%
-    filter(
-      sex == "T" &
-      unit == "NR" &
-      age == "TOTAL" &
-      nchar(geo) == length_nuts
-    )
+  df <- tryCatch({
+    eurostat::get_eurostat("demo_r_pjangrp3", time_format = "num") %>%
+      filter(
+        sex == "T" &
+          unit == "NR" &
+          age == "TOTAL" &
+          nchar(geo) == length_nuts
+      )
+  }, error = function(e) {
+    e$message <- paste(
+      "Failed to download human population data from Eurostat.\n",
+      "Reason: ", e$message, "\n",
+      "This may be due to the data source being temporarily unavailable.\n",
+      "Sorry for the inconvenience. You can check the available datasets at:\n",
+      "https://ec.europa.eu/eurostat/web/main/data/database"
+    ) 
+    stop(e)
+  })
+
   if(!is.null(nuts_filter)){
     df <- df %>% filter(geo %in% nuts_filter)
   }

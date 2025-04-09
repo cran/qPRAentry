@@ -169,16 +169,39 @@ plot_nuts(data = ntrade_EU,
           legend_title = "units") +
   xlim(-40,50) + ylim(25,70)
 
-## -----------------------------------------------------------------------------
-ntrade_redist_pop <- redist_nuts(data = ntrade_EU,
-                                 nuts_col = "country_IDs",
-                                 values_col = "mean",
-                                 to_nuts = 2,
-                                 redist_data = "population",
-                                 population_year = c(2020, 2021))
+## ----include=FALSE------------------------------------------------------------
+error_msg <- NULL
+ntrade_redist_pop <- tryCatch({
+  suppressMessages(
+    suppressWarnings(
+      redist_nuts(data = ntrade_EU,
+                  nuts_col = "country_IDs",
+                  values_col = "mean",
+                  to_nuts = 2,
+                  redist_data = "population",
+                  population_year = c(2020, 2021))
+    ))
+}, error = function(e) {
+  error_msg <<- paste("Error:", e$message)
+  NULL
+})
+eval_cond <- ifelse(is.null(ntrade_redist_pop), FALSE, TRUE)
+
+## ----eval=!eval_cond, echo=FALSE----------------------------------------------
+# message(error_msg)
+
+## ----eval=FALSE---------------------------------------------------------------
+# ntrade_redist_pop <- redist_nuts(data = ntrade_EU,
+#                                  nuts_col = "country_IDs",
+#                                  values_col = "mean",
+#                                  to_nuts = 2,
+#                                  redist_data = "population",
+#                                  population_year = c(2020, 2021))
+
+## ----eval=eval_cond-----------------------------------------------------------
 head(ntrade_redist_pop)
 
-## -----------------------------------------------------------------------------
+## ----eval=eval_cond-----------------------------------------------------------
 plot_nuts(data = ntrade_redist_pop,
           nuts_col = "NUTS2",
           values_col = "mean",
@@ -210,7 +233,7 @@ plot_nuts(data = ntrade_redist_df,
           legend_title = "units") +
    xlim(-40,50) + ylim(25,70)
 
-## -----------------------------------------------------------------------------
+## ----eval=eval_cond-----------------------------------------------------------
 # pathway model (excluding ntrade)
 model <- "(1/P1) * P2 * P3"
 
@@ -227,10 +250,10 @@ res_pathway <- pathway_model(ntrade_data = ntrade_redist_pop,
                              niter = 100)
 head(res_pathway)
 
-## -----------------------------------------------------------------------------
+## ----eval=eval_cond-----------------------------------------------------------
 res_pathway[res_pathway$NUTS2 == "Total",]
 
-## -----------------------------------------------------------------------------
+## ----eval=eval_cond-----------------------------------------------------------
 plot_nuts(data = res_pathway,
           nuts_level = 2,
           nuts_col = "NUTS2",
